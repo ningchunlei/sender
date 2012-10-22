@@ -1,0 +1,15 @@
+{
+    "appenders": [
+        { "type": "console" },
+        {
+            "category": "http",
+            "type": "dateFile",
+            "filename": "log/http.log",
+            "pattern": "yyyy-MM-dd"
+        }
+    ],
+
+    "levels": {
+        "http":  "info"
+    }
+}
