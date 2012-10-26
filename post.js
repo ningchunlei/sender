@@ -2,6 +2,22 @@ var os = require('os')
 var util = require("util")
 var buffer = require("buffer")
 
+var ShareStruct_ttypes = require("./thrift/ShareStruct_Types")
+var ErrorNo_ttypes = require("./thrift/ErrorNo_Types")
+var Exception_ttypes = require("./thrift/Exception_Types")
+
+var kestrelPool = poolModule.Pool({
+    name: "memcache",
+    create : function(callback){
+        var client = new memcache.Client(process.conf.kestrel.port, process.conf.kestrel.ip);
+        callback(null,client);
+    }  ,
+    destroy  : function(client) { client.close(); }, //当超时则释放连接
+    max      : 10,   //最大连接数
+    idleTimeoutMillis : 10,  //超时时间
+    log : true
+});
+
 var epoch = 1317398400000;
 var workerIdBits = 8;
 var sequenceBits = 12;
@@ -33,9 +49,7 @@ function getMsgId(uid){
         sequence = 0;
     }
     lastTimestamp = timestamp
-    console.log(lastTimestamp - epoch);
     var tstr = parseInt(lastTimestamp - epoch).toString(16)
-    console.log(tstr)
     var padding = 11- tstr.length
     for(i=0;i<padding;i++){
         tstr  = "0"+tstr;
@@ -54,9 +68,30 @@ function getMsgId(uid){
 }
 
 exports.service = function(req,res){
+    var msgtext = req.param("m")
+    var uid = req.param("u")
+    var msgid =  getMsgId(uid)
 
-     req.
+    bufArray = [];
+    buflen = 0;
+    var output = new TBinaryProtocol(new ttransport.TBufferedTransport(undefined, function(buf) {
+        bufArray << buf;
+        buflen += buf.length
+    }));
+    var t = new ShareStruct_ttypes.Msg({"uid":uid,"mid":msgid,"msgtext":msgtext})
+    t.write(output)
+    output.flush()
 
+    var mbuf = new Buffer(buflen)
+    var len = 0;
+    bufArray.forEach(function(buf){
+        buf.mbuf(buf,0,0,buf.len)
+        len += buf.len
+    })
+
+    kestrelPool.borrow(function(err,client){
+        client.set("PostMsg",mbuf.toString(),function(){kestrelPool.release(client)})
+    })
 }
 
 
