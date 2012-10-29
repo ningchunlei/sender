@@ -2,6 +2,12 @@ var os = require('os')
 var util = require("util")
 var buffer = require("buffer")
 
+var path = require("path")
+var thrift_path = require.resolve("thrift")
+var thrift = require("thrift")
+var ttransport = require(path.resolve(path.dirname(thrift_path),"transport"));
+TBinaryProtocol = require(path.resolve(path.dirname(thrift_path),"protocol")).TBinaryProtocol;
+
 var ShareStruct_ttypes = require("./thrift/ShareStruct_Types")
 var ErrorNo_ttypes = require("./thrift/ErrorNo_Types")
 var Exception_ttypes = require("./thrift/Exception_Types")
@@ -75,7 +81,7 @@ exports.service = function(req,res){
     bufArray = [];
     buflen = 0;
     var output = new TBinaryProtocol(new ttransport.TBufferedTransport(undefined, function(buf) {
-        bufArray << buf;
+        bufArray.push(buf);
         buflen += buf.length
     }));
     var t = new ShareStruct_ttypes.Msg({"uid":uid,"mid":msgid,"msgtext":msgtext})
